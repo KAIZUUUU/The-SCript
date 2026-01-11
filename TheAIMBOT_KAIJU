@@ -1,0 +1,671 @@
+-- Updated admin panel (GUI + ESP + input bindings)
+-- Final version: Smooth Aimbot, full ESP restored, perfect mobile/PC buttons
+-- Changed: Watermark to "By - Megatron [Discord]"
+-- Changed: "Player Aimbot" → "Player Specific Aimbot"
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = game.Workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+-- Create ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
+
+-- Styling helpers
+local function beautifyFrame(frame)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = frame
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(80, 80, 120)
+    stroke.Thickness = 2
+    stroke.Transparency = 0.3
+    stroke.Parent = frame
+    
+    local grad = Instance.new("UIGradient")
+    grad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(25,25,35)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(35,35,50))
+    }
+    grad.Rotation = 45
+    grad.Parent = frame
+    
+    frame.BorderSizePixel = 0
+end
+
+local function beautifyButton(btn)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(100, 100, 140)
+    stroke.Thickness = 2
+    stroke.Transparency = 0.4
+    stroke.Parent = btn
+    
+    btn.AutoButtonColor = false
+    btn.TextSize = 14
+    btn.Font = Enum.Font.GothamBold
+    btn.TextStrokeTransparency = 0.5
+    btn.TextWrapped = true
+    btn.TextScaled = true
+    btn.BorderSizePixel = 0
+    
+    btn.MouseEnter:Connect(function()
+        stroke.Thickness = 3
+        stroke.Transparency = 0.2
+    end)
+    btn.MouseLeave:Connect(function()
+        stroke.Thickness = 2
+        stroke.Transparency = 0.4
+    end)
+end
+
+local function beautifyLabel(lbl)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 14
+    lbl.TextColor3 = Color3.fromRGB(240,240,255)
+    lbl.BackgroundTransparency = 1
+    lbl.TextWrapped = true
+    lbl.TextScaled = true
+    lbl.TextStrokeTransparency = 0.6
+end
+
+-- Layout constants
+local frameW = 170
+local frameH = 70
+local spacing = 16
+local topY = 0.02
+
+local function getStartX()
+    local screenW = Camera and Camera.ViewportSize and Camera.ViewportSize.X or 1920
+    local totalW = (frameW * 3) + (spacing * 2)
+    local start = (screenW - totalW) / 2
+    return start / screenW
+end
+
+local startXNorm = getStartX()
+
+-- SMOOTH AIMBOT GUI
+local GeneralFrame = Instance.new("Frame")
+GeneralFrame.Parent = ScreenGui
+GeneralFrame.Position = UDim2.new(startXNorm, 0, topY, 0)
+GeneralFrame.Size = UDim2.new(0, frameW, 0, frameH)
+GeneralFrame.BackgroundColor3 = Color3.fromRGB(30,30,45)
+GeneralFrame.BackgroundTransparency = 0.1
+beautifyFrame(GeneralFrame)
+
+local GeneralLabel = Instance.new("TextLabel")
+GeneralLabel.Parent = GeneralFrame
+GeneralLabel.Size = UDim2.new(0.62, -8, 0.4, 0)
+GeneralLabel.Position = UDim2.new(0, 8, 0.05, 0)
+GeneralLabel.Text = "SMOOTH AIMBOT"
+GeneralLabel.TextColor3 = Color3.fromRGB(255,255,255)
+GeneralLabel.BackgroundTransparency = 1
+beautifyLabel(GeneralLabel)
+
+local GeneralToggle = Instance.new("TextButton")
+GeneralToggle.Parent = GeneralFrame
+GeneralToggle.Size = UDim2.new(0.36, -12, 0.35, 0)
+GeneralToggle.Position = UDim2.new(0.64, 8, 0.12, 0)
+GeneralToggle.Text = "OFF"
+GeneralToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+GeneralToggle.TextColor3 = Color3.fromRGB(255,255,255)
+beautifyButton(GeneralToggle)
+
+local GeneralHint = Instance.new("TextLabel")
+GeneralHint.Parent = GeneralFrame
+GeneralHint.Size = UDim2.new(1, -16, 0.35, 0)
+GeneralHint.Position = UDim2.new(0, 8, 0.6, 0)
+GeneralHint.Text = "Toggle: End Key / Click"
+GeneralHint.TextColor3 = Color3.fromRGB(180,180,200)
+GeneralHint.BackgroundTransparency = 1
+GeneralHint.Font = Enum.Font.Gotham
+GeneralHint.TextSize = 11
+GeneralHint.TextStrokeTransparency = 0.7
+
+-- PLAYER SPECIFIC AIMBOT GUI
+local SpecificFrame = Instance.new("Frame")
+SpecificFrame.Parent = ScreenGui
+SpecificFrame.Position = UDim2.new(startXNorm + (frameW + spacing) / Camera.ViewportSize.X, 0, topY, 0)
+SpecificFrame.Size = UDim2.new(0, frameW, 0, frameH)
+SpecificFrame.BackgroundColor3 = Color3.fromRGB(30,30,45)
+SpecificFrame.BackgroundTransparency = 0.1
+beautifyFrame(SpecificFrame)
+
+local SpecificLabel = Instance.new("TextLabel")
+SpecificLabel.Parent = SpecificFrame
+SpecificLabel.Size = UDim2.new(1, -16, 0.28, 0)
+SpecificLabel.Position = UDim2.new(0, 8, 0.02, 0)
+SpecificLabel.Text = "Player Specific Aimbot"  -- CHANGED HERE
+SpecificLabel.TextColor3 = Color3.fromRGB(255,255,255)
+SpecificLabel.BackgroundTransparency = 1
+beautifyLabel(SpecificLabel)
+
+local UsernameBox = Instance.new("TextBox")
+UsernameBox.Parent = SpecificFrame
+UsernameBox.Size = UDim2.new(0.68, -10, 0.28, 0)
+UsernameBox.Position = UDim2.new(0, 8, 0.32, 0)
+UsernameBox.PlaceholderText = "Username"
+UsernameBox.Text = ""
+UsernameBox.BackgroundColor3 = Color3.fromRGB(40,40,60)
+UsernameBox.TextColor3 = Color3.fromRGB(255,255,255)
+UsernameBox.TextSize = 13
+UsernameBox.Font = Enum.Font.GothamBold
+UsernameBox.TextWrapped = false
+UsernameBox.TextXAlignment = Enum.TextXAlignment.Left
+UsernameBox.ClearTextOnFocus = false
+UsernameBox.TextScaled = false
+
+local ubCorner = Instance.new("UICorner", UsernameBox)
+ubCorner.CornerRadius = UDim.new(0,8)
+local ubStroke = Instance.new("UIStroke", UsernameBox)
+ubStroke.Color = Color3.fromRGB(100,100,140)
+ubStroke.Transparency = 0.4
+ubStroke.Thickness = 2
+
+local SpecificToggle = Instance.new("TextButton")
+SpecificToggle.Parent = SpecificFrame
+SpecificToggle.Size = UDim2.new(0.32, -12, 0.28, 0)
+SpecificToggle.Position = UDim2.new(0.68, 10, 0.32, 0)
+SpecificToggle.Text = "OFF"
+SpecificToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+SpecificToggle.TextColor3 = Color3.fromRGB(255,255,255)
+beautifyButton(SpecificToggle)
+
+local SpecificHint = Instance.new("TextLabel")
+SpecificHint.Parent = SpecificFrame
+SpecificHint.Size = UDim2.new(1, -16, 0.35, 0)
+SpecificHint.Position = UDim2.new(0, 8, 0.62, 0)
+SpecificHint.Text = "\\ to focus | Enter to confirm | HOME to toggle"
+SpecificHint.TextColor3 = Color3.fromRGB(180,180,200)
+SpecificHint.BackgroundTransparency = 1
+SpecificHint.Font = Enum.Font.Gotham
+SpecificHint.TextSize = 9
+SpecificHint.TextScaled = true
+SpecificHint.TextWrapped = true
+SpecificHint.TextStrokeTransparency = 0.7
+
+-- ESP GUI
+local ESPFrame = Instance.new("Frame")
+ESPFrame.Parent = ScreenGui
+ESPFrame.Position = UDim2.new(startXNorm + 2*(frameW + spacing) / Camera.ViewportSize.X, 0, topY, 0)
+ESPFrame.Size = UDim2.new(0, frameW, 0, frameH)
+ESPFrame.BackgroundColor3 = Color3.fromRGB(30,30,45)
+ESPFrame.BackgroundTransparency = 0.1
+beautifyFrame(ESPFrame)
+
+local ESPLabel = Instance.new("TextLabel")
+ESPLabel.Parent = ESPFrame
+ESPLabel.Size = UDim2.new(0.62, -8, 0.4, 0)
+ESPLabel.Position = UDim2.new(0, 8, 0.05, 0)
+ESPLabel.Text = "Player ESP"
+ESPLabel.TextColor3 = Color3.fromRGB(255,255,255)
+ESPLabel.BackgroundTransparency = 1
+beautifyLabel(ESPLabel)
+
+local ESPToggle = Instance.new("TextButton")
+ESPToggle.Parent = ESPFrame
+ESPToggle.Size = UDim2.new(0.36, -12, 0.35, 0)
+ESPToggle.Position = UDim2.new(0.64, 8, 0.12, 0)
+ESPToggle.Text = "OFF"
+ESPToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+ESPToggle.TextColor3 = Color3.fromRGB(255,255,255)
+beautifyButton(ESPToggle)
+
+local ESPHint = Instance.new("TextLabel")
+ESPHint.Parent = ESPFrame
+ESPHint.Size = UDim2.new(1, -16, 0.35, 0)
+ESPHint.Position = UDim2.new(0, 8, 0.6, 0)
+ESPHint.Text = "Toggle: RightAlt / Click"
+ESPHint.TextColor3 = Color3.fromRGB(180,180,200)
+ESPHint.BackgroundTransparency = 1
+ESPHint.Font = Enum.Font.Gotham
+ESPHint.TextSize = 11
+ESPHint.TextStrokeTransparency = 0.7
+
+-- Watermark - Changed to Megatron
+local Watermark = Instance.new("TextLabel")
+Watermark.Parent = ScreenGui
+Watermark.Position = UDim2.new(startXNorm + 2*(frameW + spacing) / Camera.ViewportSize.X, 0, topY + frameH / Camera.ViewportSize.Y, 8)
+Watermark.Size = UDim2.new(0, frameW, 0, 24)
+Watermark.Text = "By - Megatron [Discord]"  -- CHANGED HERE
+Watermark.TextColor3 = Color3.fromRGB(255, 255, 255)
+Watermark.BackgroundTransparency = 1
+Watermark.Font = Enum.Font.GothamBold
+Watermark.TextSize = 14
+Watermark.TextStrokeTransparency = 0.3
+Watermark.TextStrokeColor3 = Color3.fromRGB(0, 255, 255)
+Watermark.TextXAlignment = Enum.TextXAlignment.Left
+
+local WatermarkGradient = Instance.new("UIGradient")
+WatermarkGradient.Parent = Watermark
+WatermarkGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 255)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 255)),
+    ColorSequenceKeypoint.new(0.66, Color3.fromRGB(255, 255, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 255))
+}
+
+spawn(function()
+    while true do
+        for rotation = 0, 360, 2 do
+            if Watermark and Watermark.Parent then
+                WatermarkGradient.Rotation = rotation
+            end
+            task.wait(0.03)
+        end
+    end
+end)
+
+-- Variables
+local generalAimbot = false
+local specificAimbot = false
+local targetPlayer = nil
+local espEnabled = false
+local espObjects = {}
+local usernameConfirmed = ""
+
+-- Smoothness
+local AIM_SMOOTHNESS = 0.16
+
+-- Team color
+local function getClassColor(player)
+    if player.Team and player.Team.Name then
+        local tname = player.Team.Name:lower()
+        if tname:find("outlaw") then return Color3.fromRGB(255, 60, 60) end
+        if tname:find("cowboy") then return Color3.fromRGB(255, 205, 0) end
+        if tname:find("civil") then return Color3.fromRGB(0, 255, 0) end
+    end
+    return Color3.fromRGB(255, 255, 255)
+end
+
+-- Utility functions
+local function getNearestPlayer()
+    local nearest = nil
+    local shortest = math.huge
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+            local dist = (Camera.CFrame.Position - p.Character.Head.Position).Magnitude
+            if dist < shortest then
+                shortest = dist
+                nearest = p
+            end
+        end
+    end
+    return nearest
+end
+
+local function getPlayerByName(name)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Name:lower() == (name or ""):lower() then
+            return p
+        end
+    end
+    return nil
+end
+
+local function getDistance(target)
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return 0 end
+    if not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return 0 end
+    return math.floor((LocalPlayer.Character.HumanoidRootPart.Position - target.Character.HumanoidRootPart.Position).Magnitude)
+end
+
+local function getTeamName(player)
+    return player.Team and player.Team.Name or "No Team"
+end
+
+local function getOrCreateLocalAttachment()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return nil end
+    local hrp = LocalPlayer.Character.HumanoidRootPart
+    local att = hrp:FindFirstChild("ESP_PlayerAttachment")
+    if att and att:IsA("Attachment") then return att end
+    att = Instance.new("Attachment")
+    att.Name = "ESP_PlayerAttachment"
+    att.Parent = hrp
+    return att
+end
+
+-- ESP functions
+local function createESP(player)
+    if player == LocalPlayer or not player.Character then return end
+    if espObjects[player] then removeESP(player) end
+    
+    local char = player.Character
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local folder = Instance.new("Folder")
+    folder.Name = "ESP_" .. player.Name
+    folder.Parent = char
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESPBillboard"
+    billboard.Size = UDim2.new(0, 220, 0, 80)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = hrp
+    billboard.Parent = folder
+    
+    local nameLabel = Instance.new("TextLabel", billboard)
+    nameLabel.Size = UDim2.new(1,0,0.33,0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    nameLabel.TextSize = 16
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextStrokeTransparency = 0.5
+    
+    local classLabel = Instance.new("TextLabel", billboard)
+    classLabel.Size = UDim2.new(1,0,0.33,0)
+    classLabel.Position = UDim2.new(0,0,0.33,0)
+    classLabel.BackgroundTransparency = 1
+    classLabel.Text = "Class: " .. getTeamName(player)
+    classLabel.TextColor3 = Color3.fromRGB(235,235,235)
+    classLabel.TextSize = 14
+    classLabel.Font = Enum.Font.Gotham
+    classLabel.TextStrokeTransparency = 0.5
+    
+    local hpLabel = Instance.new("TextLabel", billboard)
+    hpLabel.Size = UDim2.new(1,0,0.34,0)
+    hpLabel.Position = UDim2.new(0,0,0.66,0)
+    hpLabel.BackgroundTransparency = 1
+    hpLabel.Text = "HP: 100/100"
+    hpLabel.TextColor3 = Color3.fromRGB(235,235,235)
+    hpLabel.TextSize = 14
+    hpLabel.Font = Enum.Font.Gotham
+    hpLabel.TextStrokeTransparency = 0.5
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESPHighlight"
+    highlight.Adornee = char
+    highlight.Parent = folder
+    highlight.OutlineTransparency = 0
+    highlight.FillTransparency = 0.6
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    
+    local selBox = Instance.new("SelectionBox")
+    selBox.Name = "ESPSelection"
+    selBox.Adornee = hrp
+    selBox.LineThickness = 0.02
+    selBox.SurfaceTransparency = 1
+    selBox.Parent = folder
+    
+    local localAtt = getOrCreateLocalAttachment()
+    local targetAtt = Instance.new("Attachment")
+    targetAtt.Name = "TargetAttachment"
+    targetAtt.Parent = hrp
+    
+    local beam
+    if localAtt then
+        beam = Instance.new("Beam")
+        beam.Name = "ESPBeam"
+        beam.Attachment0 = localAtt
+        beam.Attachment1 = targetAtt
+        beam.Width0 = 0.12
+        beam.Width1 = 0.12
+        beam.FaceCamera = true
+        beam.Parent = folder
+    end
+    
+    espObjects[player] = {
+        folder = folder,
+        billboard = billboard,
+        hpLabel = hpLabel,
+        teamLabel = classLabel,
+        attachment0 = localAtt,
+        attachment1 = targetAtt,
+        character = char,
+        highlight = highlight,
+        selBox = selBox,
+        beam = beam
+    }
+    
+    local col = getClassColor(player)
+    highlight.FillColor = col
+    highlight.OutlineColor = col
+    selBox.Color3 = col
+    if beam then
+        beam.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, col), ColorSequenceKeypoint.new(1, col)}
+    end
+end
+
+local function updatePlayerInfo(player)
+    if not espObjects[player] or not player.Character then return end
+    local entry = espObjects[player]
+    local hum = player.Character:FindFirstChildOfClass("Humanoid")
+    if hum and entry.hpLabel then
+        entry.hpLabel.Text = string.format("HP: %.0f/%.0f", hum.Health, hum.MaxHealth)
+    end
+    if entry.teamLabel then
+        entry.teamLabel.Text = "Class: " .. getTeamName(player) .. " | " .. tostring(getDistance(player)) .. " studs"
+    end
+    local col = getClassColor(player)
+    if entry.highlight then
+        entry.highlight.FillColor = col
+        entry.highlight.OutlineColor = col
+    end
+    if entry.selBox then entry.selBox.Color3 = col end
+    if entry.beam then
+        entry.beam.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, col), ColorSequenceKeypoint.new(1, col)}
+    end
+end
+
+local function removeESP(player)
+    if espObjects[player] then
+        if espObjects[player].folder then espObjects[player].folder:Destroy() end
+        if espObjects[player].attachment1 then espObjects[player].attachment1:Destroy() end
+        espObjects[player] = nil
+    end
+end
+
+local function enableESP()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.CharacterAdded:Wait()
+        task.wait(1)
+    end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then createESP(p) end
+    end
+end
+
+local function disableESP()
+    for p in pairs(espObjects) do removeESP(p) end
+    espObjects = {}
+end
+
+-- Smooth aimbot
+local function updateAimbot()
+    if not Camera or not LocalPlayer or not LocalPlayer.Character then return end
+    
+    local currentTarget = nil
+    
+    if specificAimbot and usernameConfirmed ~= "" then
+        currentTarget = getPlayerByName(usernameConfirmed)
+        if not currentTarget then
+            specificAimbot = false
+            SpecificToggle.Text = "OFF"
+            SpecificToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+        end
+    elseif generalAimbot then
+        currentTarget = getNearestPlayer()
+    end
+    
+    if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("Head") then
+        local headPos = currentTarget.Character.Head.Position
+        local direction = (headPos - Camera.CFrame.Position).Unit
+        local targetCF = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + direction * 100)
+        Camera.CFrame = Camera.CFrame:Lerp(targetCF, AIM_SMOOTHNESS)
+        targetPlayer = currentTarget
+    else
+        targetPlayer = nil
+    end
+end
+
+-- Perfect button binding
+local function bindUniversalToggle(btn, callback)
+    btn.MouseButton1Click:Connect(callback)
+    
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            TweenService:Create(btn, TweenInfo.new(0.08), {BackgroundTransparency = 0.05}):Play()
+        end
+    end)
+    
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundTransparency = 0}):Play()
+            callback()
+        end
+    end)
+    
+    pcall(function() btn.Activated:Connect(callback) end)
+end
+
+-- Bind toggles
+bindUniversalToggle(GeneralToggle, function()
+    generalAimbot = not generalAimbot
+    GeneralToggle.Text = generalAimbot and "ON" or "OFF"
+    GeneralToggle.BackgroundColor3 = generalAimbot and Color3.fromRGB(50, 200, 100) or Color3.fromRGB(180,50,50)
+end)
+
+bindUniversalToggle(SpecificToggle, function()
+    if usernameConfirmed == "" then return end
+    specificAimbot = not specificAimbot
+    if specificAimbot then
+        if getPlayerByName(usernameConfirmed) then
+            SpecificToggle.Text = "ON"
+            SpecificToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+        else
+            specificAimbot = false
+            SpecificToggle.Text = "OFF"
+            SpecificToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+        end
+    else
+        SpecificToggle.Text = "OFF"
+        SpecificToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+    end
+end)
+
+bindUniversalToggle(ESPToggle, function()
+    espEnabled = not espEnabled
+    if espEnabled then
+        ESPToggle.Text = "ON"
+        ESPToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+        enableESP()
+    else
+        ESPToggle.Text = "OFF"
+        ESPToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+        disableESP()
+    end
+end)
+
+-- Username confirm
+UsernameBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        usernameConfirmed = UsernameBox.Text
+        print("Username locked: " .. usernameConfirmed)
+    end
+end)
+
+-- Keybinds
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.End then
+        generalAimbot = not generalAimbot
+        GeneralToggle.Text = generalAimbot and "ON" or "OFF"
+        GeneralToggle.BackgroundColor3 = generalAimbot and Color3.fromRGB(50,200,100) or Color3.fromRGB(180,50,50)
+        
+    elseif input.KeyCode == Enum.KeyCode.Home then
+        if usernameConfirmed == "" then warn("No username confirmed!") return end
+        specificAimbot = not specificAimbot
+        if specificAimbot then
+            if getPlayerByName(usernameConfirmed) then
+                SpecificToggle.Text = "ON"
+                SpecificToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+            else
+                specificAimbot = false
+                SpecificToggle.Text = "OFF"
+                SpecificToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+            end
+        else
+            SpecificToggle.Text = "OFF"
+            SpecificToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+        end
+        
+    elseif input.KeyCode == Enum.KeyCode.RightAlt then
+        espEnabled = not espEnabled
+        ESPToggle.Text = espEnabled and "ON" or "OFF"
+        ESPToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(50,200,100) or Color3.fromRGB(180,50,50)
+        if espEnabled then enableESP() else disableESP() end
+        
+    elseif input.KeyCode == Enum.KeyCode.BackSlash then
+        pcall(function() UsernameBox:CaptureFocus() end)
+    end
+end)
+
+-- Main loop
+RunService.RenderStepped:Connect(function()
+    updateAimbot()
+    if espEnabled then
+        for player, data in pairs(espObjects) do
+            if player and player.Parent and player.Character then
+                updatePlayerInfo(player)
+            else
+                removeESP(player)
+            end
+        end
+    end
+end)
+
+-- ESP refresh
+spawn(function()
+    while true do
+        task.wait(5)
+        if espEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and not espObjects[p] then
+                    pcall(createESP, p)
+                end
+            end
+            for p in pairs(espObjects) do
+                if not table.find(Players:GetPlayers(), p) then pcall(removeESP, p) end
+            end
+        end
+    end
+end)
+
+-- Respawn cleanup
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    local hum = char:WaitForChild("Humanoid", 5)
+    if hum then
+        hum.Died:Connect(function()
+            generalAimbot = false
+            specificAimbot = false
+            espEnabled = false
+            GeneralToggle.Text = "OFF"
+            SpecificToggle.Text = "OFF"
+            ESPToggle.Text = "OFF"
+            GeneralToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+            SpecificToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+            ESPToggle.BackgroundColor3 = Color3.fromRGB(180,50,50)
+            disableESP()
+        end)
+    end
+end)
+
+print("Admin Panel Loaded - Final Version!")
+print("Controls:")
+print("  SMOOTH AIMBOT: End")
+print("  Player ESP: Right Alt")
+print("  Player Specific Aimbot: \\ (focus) → type name → Enter → HOME (toggle)")
+print("All buttons work perfectly on mobile & PC!")
